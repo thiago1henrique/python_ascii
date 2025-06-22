@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Imagem para Arte ASCII</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f9; color: #333; margin: 2em; }
+        .container { margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #444; }
+        .upload-area { border: 2px dashed #ccc; padding: 20px; text-align: center; margin-bottom: 20px; cursor: pointer; }
+        .upload-area:hover { border-color: #777; }
+        #imageInput { display: none; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        #results { margin-top: 20px; }
+        .result-card { background: #fafafa; border: 1px solid #eee; border-radius: 5px; padding: 15px; margin-bottom: 15px; }
+        .result-card h3 { margin-top: 0; }
+        pre {display: flex; justify-content: center; margin: 0 auto; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; background: #2d2d2d; color: #dcdcdc; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Conversor de Imagem para Arte ASCII</h1>
+
+        <form id="uploadForm">
+            <label for="imageInput" class="upload-area">
+                <p>Clique aqui ou arraste e solte as imagens</p>
+            </label>
+            <input type="file" id="imageInput" name="images" multiple accept="image/*">
+            <button type="submit">Converter Imagens</button>
+        </form>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const imageInput = document.getElementById('imageInput');
+        const resultsDiv = document.getElementById('results');
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            for (const file of imageInput.files) {
+                formData.append('images', file);
+            }
+
+            resultsDiv.innerHTML = '<p>Enviando e processando...</p>';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                resultsDiv.innerHTML = '';
+
+                data.task_ids.forEach(taskId => {
+                    const taskDiv = document.createElement('div');
+                    taskDiv.id = `task-${taskId}`;
+                    taskDiv.classList.add('result-card');
+                    taskDiv.innerHTML = `<h3>Processando...</h3><p>Aguarde um momento.</p>`;
+                    resultsDiv.appendChild(taskDiv);
+
+                    checkStatus(taskId);
+                });
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Erro ao enviar imagens: ${error.message}</p>`;
+            }
+        });
+
+        function checkStatus(taskId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/status/${taskId}`);
+                    const data = await response.json();
+
+                    const taskDiv = document.getElementById(`task-${data.id}`);
+
+                    if (data.status === 'concluido' || data.status === 'erro') {
+                        clearInterval(interval); // Para de verificar
+                        let resultHTML = `<h3>${data.nome_original} - ${data.status}</h3>`;
+                        if (data.status === 'concluido') {
+                            resultHTML += `<pre>${data.resultado}</pre>`;
+                        } else {
+                            resultHTML += `<p style="color: red;">${data.resultado}</p>`;
+                        }
+                        taskDiv.innerHTML = resultHTML;
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                    console.error('Erro ao verificar status:', error);
+                }
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
