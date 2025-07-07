@@ -3,20 +3,23 @@ import uuid
 import threading
 from flask import Flask, render_template, request, jsonify
 from queue import Queue
+from werkzeug.utils import secure_filename  # Adicione esta importação
 from conversor_ascii import gerar_arte_ascii
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Adicione limitação de extensões permitidas
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
 
 tasks_db = {}
 task_queue = Queue()
 
+
 def worker():
-    """Função que roda em background para processar as tarefas da fila."""
     while True:
         task_id = task_queue.get()
         if task_id is None: break
@@ -30,7 +33,17 @@ def worker():
         except Exception as e:
             task['status'] = 'erro'
             task['resultado'] = f"Erro no processamento: {e}"
+        finally:
+            # Remover arquivo após processamento
+            if os.path.exists(task['caminho_imagem']):
+                os.remove(task['caminho_imagem'])
         task_queue.task_done()
+
+
+# Função para verificar extensões permitidas
+def allowed_file(filename):
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route('/')
@@ -47,13 +60,17 @@ def upload_files():
     task_ids = []
 
     for file in files:
-        if file.filename == '': continue
+        if file.filename == '':
+            continue
+
+        # Verificar extensão permitida
+        if not allowed_file(file.filename):
+            continue
 
         task_id = str(uuid.uuid4())
-        # Usa o UPLOAD_FOLDER definido na configuração
-        caminho_imagem = os.path.join(app.config['UPLOAD_FOLDER'], f"{task_id}_{file.filename}")
+        filename = secure_filename(f"{task_id}_{file.filename}")  # Corrige nomes de arquivo
+        caminho_imagem = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-        # O erro provavelmente está aqui!
         file.save(caminho_imagem)
 
         tasks_db[task_id] = {
