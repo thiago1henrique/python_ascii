@@ -23,7 +23,6 @@ def pixels_to_ascii(image):
 def gerar_arte_ascii(caminho_imagem, new_width=100):
     try:
         with PIL.Image.open(caminho_imagem) as img:
-            # Converter para RGB se for PNG com transparência
             if img.mode in ('RGBA', 'P'):
                 img = img.convert('RGB')
 
@@ -40,3 +39,36 @@ def gerar_arte_ascii(caminho_imagem, new_width=100):
 
     except Exception as e:
         return f"Erro no processamento: {str(e)}"
+
+
+def ordenar_arte_ascii(arte_ascii, largura):
+    linhas = arte_ascii.split('\n')
+    n = len(linhas)
+
+    def densidade(i):
+        return sum(1 for char in linhas[i] if char != ' ')
+
+    for i in range(n // 2 - 1, -1, -1):
+        heapify(linhas, n, i, densidade)
+
+    for i in range(n - 1, 0, -1):
+        linhas[i], linhas[0] = linhas[0], linhas[i]
+        heapify(linhas, i, 0, densidade)
+
+    return '\n'.join(linhas)
+
+
+def heapify(arr, n, i, key_func):
+    maior = i
+    esq = 2 * i + 1
+    dir = 2 * i + 2
+
+    if esq < n and key_func(esq) > key_func(maior):
+        maior = esq
+
+    if dir < n and key_func(dir) > key_func(maior):
+        maior = dir
+
+    if maior != i:
+        arr[i], arr[maior] = arr[maior], arr[i]
+        heapify(arr, n, maior, key_func)

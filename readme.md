@@ -1,93 +1,188 @@
-Conversor de Imagem para Arte ASCII
-✨ Funcionalidades
+## 1. Descrição do Problema Resolvido
 
-    Converte qualquer imagem suportada pela biblioteca Pillow.
-    Redimensiona a imagem para uma largura definida, mantendo a proporção.
-    Ajusta a proporção de altura para uma exibição mais correta em terminais de texto.
-    Converte a imagem para escala de cinza para mapear os níveis de brilho.
-    Exibe a arte ASCII colorida no terminal.
-    Salva o resultado final em um arquivo ascii_art.txt.
+O projeto resolve o problema de conversão de imagens digitais em arte ASCII, uma representação visual que usa caracteres de texto para recriar imagens. Isso permite:
+```
+   * Visualizar imagens em ambientes restritos a texto
+   * Compartilhar representações artísticas de imagens via texto
+   * Processar múltiplas imagens simultaneamente com priorização
+   * Manter histórico de conversões
+   * Aplicar transformações na arte gerada (como ordenação)
+```
 
-⚙️ Pré-requisitos
+## 2. Justificativa da Escolha do Tema
 
-Para executar este script, você precisará ter:
+A escolha se baseou em:
+```
+    * Relevância técnica: Combina processamento de imagens com estruturas de dados
+    * Aplicabilidade prática: Útil para desenvolvedores, artistas digitais e entusiastas
+    * Adequação aos requisitos: Permite implementar múltiplas estruturas de dados
+    * Potencial educativo: Demonstra aplicação prática de algoritmos estudados
+    * Desafio técnico: Equilíbrio entre qualidade visual e desempenho
+```
 
-    Python 3.x
-    A biblioteca Pillow
+## 3. Estruturas de Dados Aplicadas
 
-🚀 Instalação e Configuração
+a) Fila de Prioridade (Heap)
 
-Siga os passos abaixo para preparar o ambiente e executar o projeto.
+Aplicação:
+```
+* Gerenciamento de tarefas de conversão
+* Priorização por tamanho de arquivo (imagens menores primeiro)
+```
 
-    Clone ou baixe o script para a sua máquina local.
+Implementação:
+````
+Uso do módulo heapq do Python
+Tuplas (tamanho_arquivo, id_heap, task_id) como elementos
+````
+Justificativa:
+```
+* Eficiência O(log n) nas operações de inserção/remoção
+* Garante que tarefas mais rápidas sejam processadas primeiro
+* Melhora tempo de resposta percebido pelo usuário
+```
 
-    Abra um terminal na pasta onde você salvou o projeto.
+* b) Lista Encadeada
 
-    (Altamente Recomendado) Crie e ative um ambiente virtual:
-    Isso isola as dependências do projeto e evita conflitos com outros projetos Python.
-    Bash
+    Aplicação:
 
-# Cria o ambiente virtual
+        Armazenamento do histórico de tarefas concluídas
+
+        Limitação ao último N itens (10 por padrão)
+
+    Implementação:
+
+        Classe HistoricoNode com ponteiro next
+
+        Ponteiros head e tail para gerenciamento
+
+    Justificativa:
+
+        Inserção/remoção O(1) no início/fim
+
+        Uso eficiente de memória para dados voláteis
+
+        Ideal para histórico de tamanho limitado
+
+c) Algoritmo Heapsort
+
+Aplicação:
+
+```
+Ordenação da arte ASCII por densidade de caracteres
+Transformação visual opcional para o usuário
+```
+
+Implementação:
+```
+Funções ordenar_arte_ascii() e heapify()
+Ordenação baseada em densidade (caracteres não-espaço)
+Funções ordenar_arte_ascii() e heapify()
+Ordenação baseada em densidade (caracteres não-espaço)
+```
+
+Justificativa:
+```
+Complexidade O(n log n) garantida
+Relação natural com a estrutura heap já utilizada
+Demonstração prática do algoritmo estudado
+```
+
+## 4. Desafios Enfrentados e Soluções
+
+* Desafio 1: Processamento Assíncrono 
+    Problema: Bloqueio da interface durante conversão
+    Solução: Sistema de filas com thread worker separada
+<br/><br/>
+* Desafio 2: Gerenciamento de Prioridades
+    Problema: Tarefas grandes bloqueando pequenas
+    Solução: Heap prioritário baseado em tamanho de arquivo
+<br/><br/>
+* Desafio 3: Manutenção de Histórico
+    Problema: Armazenamento eficiente com limite máximo
+    Solução: Lista encadeada com corte automático
+<br/><br/>
+* Desafio 4: Qualidade Visual ASCII
+    Problema: Representação inadequada de imagens
+    Solução: Ajuste na escala de cinza e caracteres selecionados
+<br/><br/>
+Desafio 5: Ordenação de Arte Multilinha
+    Problema: Manter estrutura visual após ordenação
+    Solução: Divisão por linhas e ordenação baseada em densidade
+<br/><br/>
+5. Instruções para Executar o Projeto
+
+Pré-requisitos:
+
+    Python 3.6+
+
+    Bibliotecas: Flask, Pillow
+
+Passo a passo:
+
+    Configurar ambiente:
+
+bash
+
+# Criar ambiente virtual (opcional)
 python -m venv venv
 
-Bash
-
-# Ativa o ambiente (Windows)
-.\venv\Scripts\activate
-
-Bash
-
-# Ativa o ambiente (macOS/Linux)
+# Ativar ambiente
+# Linux/Mac:
 source venv/bin/activate
+# Windows:
+venv\Scripts\activate
 
-Instale as dependências necessárias:
-O único requisito para este projeto é a biblioteca Pillow.
-Bash
+# Instalar dependências
+pip install Flask Pillow
 
-pip install Pillow
+    Estrutura de arquivos:
 
-(Opcional) Crie um arquivo requirements.txt para facilitar a instalação para outros usuários:
-Bash
+text
 
-    pip freeze > requirements.txt
+projeto/
+├── app.py
+├── conversor_ascii.py
+└── templates/
+    └── index.html
 
-    Da próxima vez, qualquer pessoa poderá instalar as dependências apenas com pip install -r requirements.txt.
+    Executar aplicação:
 
-▶️ Como Usar
+bash
 
-    Com o ambiente virtual ativado e as dependências instaladas, execute o script principal:
-    Bash
+python app.py
 
-    python seu_script.py
+    Acessar interface:
+    Abra o navegador em: http://localhost:5000
 
-    (Substitua seu_script.py pelo nome que você deu ao seu arquivo Python)
+Operação:
 
-    O programa solicitará que você insira o caminho para o arquivo de imagem:
+    Na página inicial, clique na área tracejada ou arraste imagens
 
-    Insira o caminho para a imagem:
+    Selecione uma ou mais imagens (formatos: JPG, PNG, GIF, BMP)
 
-    Forneça o caminho completo para a sua imagem e pressione Enter.
-        Exemplo no Windows: C:\Users\SeuUsuario\Downloads\minha_foto.jpg
-        Exemplo no macOS/Linux: /home/usuario/Imagens/paisagem.png
+    Clique em "Converter Imagens"
 
-    A arte ASCII será impressa no terminal, e um arquivo chamado ascii_art.txt será criado na mesma pasta do script com o resultado.
+    Acompanhe o status do processamento
 
-🎨 Exemplo de Saída
+    Para arte concluída:
 
-A saída no terminal e no arquivo .txt será algo parecido com isto, dependendo da imagem de entrada:
+        Visualize o resultado
 
-          ++++*????????S#S?*+;:,           
-         +*?S#S??????????S#S?*+;:          
-        ;*?S#S????????????S#S?*+;          
-        *?S#S??????????????S#S?*;          
-       ;*?S#S????????????????S#S?* *?S#S??????????????????S#S?         
-      ;*?S#S???????????????????S#S         
-      *?S#S?????????????????????S#         
-      *?S#S?????????????????????S#         
-      *?S#S?????????????????????S#         
-      ;*?S#S???????????????????S#          
-       *?S#S??????????????????S#S          
-       ;*?S#S????????????????S#S?          
-        *?S#S??????????????S#S?* ;*?S#S????????????S#S?*+           
-         ;+*?S#S??????????S#S?*+           
-           ,;+*?S#####S??S#S?*+;            
+        Clique em "Ordenar Arte" para aplicar transformação
+
+    Clique em "Carregar Histórico" para ver tarefas recentes
+
+Recursos Adicionais:
+
+    API de status: /status/<task_id>
+
+    API de histórico: /historico
+
+    API de ordenação: POST /ordenar/<task_id>
+
+Arquivos de Exemplo:
+Imagens de teste podem ser colocadas na pasta uploads/ (criada automaticamente)
+
+Encerramento:
+Pressione Ctrl+C no terminal para parar o servidor
