@@ -1,3 +1,4 @@
+# Importações necessárias
 import os
 import uuid
 import threading
@@ -7,19 +8,22 @@ from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename, send_from_directory
 from conversor_ascii import gerar_arte_ascii, ordenar_arte_ascii
 
+# Inicializa o app Flask
 app = Flask(__name__)
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+# Configuração da pasta de uploads\UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Tipos de arquivos permitidos para upload
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp'}
 
+# Banco de dados em memória para armazenar tarefas e fila de prioridade
 tasks_db = {}
 task_heap = []
-heap_id_counter = 0
+heap_id_counter = 0  # usado para desempatar tarefas com mesmo tamanho
 
-
+#  Estrutura de lista encadeada para manter histórico limitado
 class HistoricoNode:
     __slots__ = ('task_id', 'timestamp', 'next')
 
@@ -28,26 +32,26 @@ class HistoricoNode:
         self.timestamp = time.time()
         self.next = None
 
-
+# Ponteiros da lista encadeada
 historico_head = None
 historico_tail = None
-HISTORICO_MAX = 10
+HISTORICO_MAX = 10  # Limite de histórico
 
+# Rota para servir arquivos HTML manualmente, se necessário
 @app.route('/templates/<path:filename>')
 def custom_static(filename):
     return send_from_directory('templates', filename)
 
-
+#Verifica se o arquivo tem uma extensão permitida
 def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
+#Thread que processa as imagens em segundo plano
 def worker():
     global task_heap
     while True:
         if task_heap:
-            # Extrai a tarefa de maior prioridade (menor tamanho de arquivo)
+            # Retira a tarefa de maior prioridade (menor tamanho)
             _, heap_id, task_id = heapq.heappop(task_heap)
             task = tasks_db.get(task_id)
             if not task:
@@ -62,15 +66,15 @@ def worker():
                 task['status'] = 'erro'
                 task['resultado'] = f"Erro no processamento: {e}"
             finally:
-                # Remover arquivo após processamento
+                # Apaga a imagem após o processamento
                 if os.path.exists(task['caminho_imagem']):
                     os.remove(task['caminho_imagem'])
-            # Adicionar ao histórico
+            #Adiciona ao histórico encadeado
             adicionar_ao_historico(task_id)
         else:
-            time.sleep(0.5)
+            time.sleep(0.5)  # espera um pouco caso não haja tarefas
 
-
+# Adiciona uma tarefa ao histórico limitado
 def adicionar_ao_historico(task_id):
     global historico_head, historico_tail
     new_node = HistoricoNode(task_id)
@@ -82,6 +86,7 @@ def adicionar_ao_historico(task_id):
         historico_tail.next = new_node
         historico_tail = new_node
 
+    # Mantém apenas os últimos 10 nós
     count = 1
     current = historico_head
 
@@ -93,12 +98,12 @@ def adicionar_ao_historico(task_id):
         current.next = None
         historico_tail = current
 
-
+# Página principal
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
+# Endpoint para upload de imagens
 @app.route('/upload', methods=['POST'])
 def upload_files():
     global heap_id_counter
@@ -109,22 +114,19 @@ def upload_files():
     task_ids = []
 
     for file in files:
-        if file.filename == '':
+        if file.filename == '' or not allowed_file(file.filename):
             continue
 
-        if not allowed_file(file.filename):
-            continue
-
+        # Gera ID único e salva o arquivo
         task_id = str(uuid.uuid4())
         filename = secure_filename(f"{task_id}_{file.filename}")
         caminho_imagem = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
         file.save(caminho_imagem)
 
-        # Calcular prioridade (tamanho do arquivo)
+        # Prioridade baseada no tamanho do arquivo
         file.seek(0, os.SEEK_END)
         file_size = file.tell()
-        file.seek(0)  # Volta para o início
+        file.seek(0)
 
         tasks_db[task_id] = {
             'id': task_id,
@@ -134,16 +136,15 @@ def upload_files():
             'resultado': None
         }
 
-        # Adicionar à fila de prioridade (heap)
-        heap_id = heap_id_counter
+        # Insere na fila de prioridade
+        heapq.heappush(task_heap, (file_size, heap_id_counter, task_id))
         heap_id_counter += 1
-        heapq.heappush(task_heap, (file_size, heap_id, task_id))
 
         task_ids.append(task_id)
 
     return jsonify({'task_ids': task_ids})
 
-
+# Verifica o status de uma tarefa
 @app.route('/status/<task_id>')
 def get_status(task_id):
     task = tasks_db.get(task_id)
@@ -156,7 +157,7 @@ def get_status(task_id):
         'resultado': task.get('resultado')
     })
 
-
+# Retorna histórico das últimas tarefas
 @app.route('/historico')
 def get_historico():
     historico = []
@@ -173,14 +174,13 @@ def get_historico():
         current = current.next
     return jsonify(historico)
 
-
+#Ordena a arte ASCII pelo número de caracteres em cada linha
 @app.route('/ordenar/<task_id>', methods=['POST'])
 def ordenar_arte(task_id):
     task = tasks_db.get(task_id)
     if not task or task['status'] != 'concluido':
         return jsonify({'error': 'Tarefa não disponível'}), 404
 
-    # Largura original usada para a arte
     data = request.get_json()
     largura = data.get('largura', 100)
 
@@ -191,7 +191,7 @@ def ordenar_arte(task_id):
 
     return jsonify({'arte_ordenada': arte_ordenada})
 
-
+# Inicia o servidor e a thread de processamento
 if __name__ == '__main__':
     worker_thread = threading.Thread(target=worker, daemon=True)
     worker_thread.start()
